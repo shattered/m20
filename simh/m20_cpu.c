@@ -757,9 +757,10 @@ t_stat ext_io (int a1, t_value *sum)
  */
 t_stat cpu_one_inst ()
 {
-	int flags, op, a1, a2, a3, n = 0;
+	u_int32_t flags, op, a1, a2, a3, n = 0;
 	t_value x, y;
 	t_stat err;
+	int s;
 
 	flags = RK >> 42 & 7;
 	op = RK >> 36 & 077;
@@ -842,35 +843,35 @@ addop:		RR = (x & MANTISSA) | (y & ~MANTISSA & WORD);
 		y = (x & ~MANTISSA) - (load (a2) & ~MANTISSA);
 		goto addop;
 	case 014: /* сдвиг мантиссы по адресу */
-		n = (a1 & 0177) - 64;
-		delay += 61.5 + 1.5 * (n>0 ? n : -n);
+		s = (a1 & 0177) - 64;
+		delay += 61.5 + 1.5 * (n>0 ? s : -s);
 shm:		y = load (a2);
 		RR = (y & ~MANTISSA);
 		if (n > 0)
-			RR |= (y & MANTISSA) << n;
+			RR |= (y & MANTISSA) << s;
 		else if (n < 0)
-			RR |= (y & MANTISSA) >> -n;
+			RR |= (y & MANTISSA) >> -s;
 		store (a3, RR);
 		OMEGA = ((RR & MANTISSA) == 0);
 		break;
 	case 034: /* сдвиг мантиссы по порядку числа */
-		n = (int) (load (a1) >> 36 & 0177) - 64;
-		delay += 24 + 1.5 * (n>0 ? n : -n);
+		s = (int) (load (a1) >> 36 & 0177) - 64;
+		delay += 24 + 1.5 * (n>0 ? s : -s);
 		goto shm;
 	case 054: /* сдвиг по адресу */
-		n = (a1 & 0177) - 64;
-		delay += 61.5 + 1.5 * (n>0 ? n : -n);
+		s = (a1 & 0177) - 64;
+		delay += 61.5 + 1.5 * (n>0 ? s : -s);
 shift:		RR = load (a2);
-		if (n > 0)
-			RR = (RR << n) & WORD;
-		else if (n < 0)
-			RR >>= -n;
+		if (s > 0)
+			RR = (RR << s) & WORD;
+		else if (s < 0)
+			RR = (RR >> (-s));
 		store (a3, RR);
 		OMEGA = (RR == 0);
 		break;
 	case 074: /* сдвиг по порядку числа */
-		n = (int) (load (a1) >> 36 & 0177) - 64;
-		delay += 24 + 1.5 * (n>0 ? n : -n);
+		s = (int) (load (a1) >> 36 & 0177) - 64;
+		delay += 24 + 1.5 * (n>0 ? s : -s);
 		goto shift;
 	case 007: /* циклическое сложение */
 		x = load (a1);
@@ -982,7 +983,7 @@ csum:		if (RR & BIT46)
 	case 072: /* установка регистра адреса числом */
 		RR = 052000000000000LL | (a1 << 12);
 		store (a3, RR);
-		RA = load (a2) >> 12 & 07777;
+		RA = (load (a2) >> 12) & 07777;
 		delay += 24;
 		break;
 	case 010: /* ввод с перфокарт */
